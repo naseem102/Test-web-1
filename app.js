@@ -159,7 +159,7 @@ const updateMobile = () => {
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.35 : 1.75));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.35;
+renderer.toneMappingExposure = 1.05;
 renderer.setClearColor(0x07080c);
 
 const scene = new THREE.Scene();
@@ -184,79 +184,73 @@ function makeCardTexture(project) {
   cnv.width = w;
   cnv.height = h;
   const ctx = cnv.getContext("2d");
+  const hue = project.hue;
 
   const g = ctx.createLinearGradient(0, 0, w, h);
-  const hue = project.hue;
-  g.addColorStop(0, `hsla(${hue}, 70%, 18%, 1)`);
-  g.addColorStop(0.35, `hsla(${hue + 40}, 80%, 28%, 1)`);
-  g.addColorStop(0.65, `hsla(${hue + 80}, 60%, 22%, 1)`);
-  g.addColorStop(1, `hsla(${hue + 20}, 50%, 12%, 1)`);
+  g.addColorStop(0, `hsla(${hue}, 55%, 10%, 1)`);
+  g.addColorStop(0.4, `hsla(${hue + 30}, 65%, 16%, 1)`);
+  g.addColorStop(0.7, `hsla(${hue + 60}, 50%, 12%, 1)`);
+  g.addColorStop(1, `hsla(${hue}, 40%, 8%, 1)`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 40; i++) {
     const x = Math.random() * w;
     const y = Math.random() * h;
-    const r = 40 + Math.random() * 180;
+    const r = 50 + Math.random() * 160;
     const ng = ctx.createRadialGradient(x, y, 0, x, y, r);
-    ng.addColorStop(0, `hsla(${hue + Math.random() * 60}, 90%, ${50 + Math.random() * 30}%, ${0.08 + Math.random() * 0.15})`);
+    ng.addColorStop(0, `hsla(${hue + Math.random() * 50}, 80%, ${35 + Math.random() * 20}%, ${0.12 + Math.random() * 0.18})`);
     ng.addColorStop(1, "transparent");
     ctx.fillStyle = ng;
     ctx.fillRect(0, 0, w, h);
   }
 
-  const sheen = ctx.createLinearGradient(0, 0, w, 0);
+  const sheen = ctx.createLinearGradient(0, 0, w, h);
   sheen.addColorStop(0, "transparent");
-  sheen.addColorStop(0.4, "rgba(255,255,255,0.06)");
-  sheen.addColorStop(0.55, "rgba(255,255,255,0.18)");
-  sheen.addColorStop(0.7, "rgba(255,255,255,0.06)");
+  sheen.addColorStop(0.45, "rgba(255,255,255,0.04)");
+  sheen.addColorStop(0.52, "rgba(255,255,255,0.12)");
+  sheen.addColorStop(0.6, "rgba(255,255,255,0.04)");
   sheen.addColorStop(1, "transparent");
   ctx.fillStyle = sheen;
   ctx.fillRect(0, 0, w, h);
 
-  ctx.fillStyle = "rgba(231,194,122,0.85)";
-  ctx.font = "600 28px Outfit, system-ui, sans-serif";
-  ctx.fillText(project.kicker.toUpperCase(), 72, 90);
+  ctx.fillStyle = "rgba(231,194,122,0.95)";
+  ctx.font = "600 30px Outfit, system-ui, sans-serif";
+  ctx.fillText(project.kicker.toUpperCase(), 64, 88);
 
-  ctx.fillStyle = "rgba(255,250,245,0.95)";
-  ctx.font = "800 92px Big Shoulders Display, Impact, sans-serif";
+  ctx.fillStyle = "rgba(255,252,248,0.98)";
+  ctx.font = "800 96px Big Shoulders Display, Impact, sans-serif";
   const words = project.title.split(" ");
-  let ty = h * 0.42;
+  let ty = h * 0.4;
   words.forEach((word) => {
-    ctx.fillText(word, 72, ty);
-    ty += 96;
+    ctx.fillText(word, 64, ty);
+    ty += 100;
   });
 
-  ctx.fillStyle = "rgba(163,155,144,0.9)";
-  ctx.font = "400 26px Outfit, system-ui, sans-serif";
-  ctx.fillText(project.year, 72, h - 70);
+  ctx.fillStyle = "rgba(180,170,155,0.95)";
+  ctx.font = "400 28px Outfit, system-ui, sans-serif";
+  ctx.fillText(project.year, 64, h - 64);
 
-  ctx.strokeStyle = "rgba(255,255,255,0.22)";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(18, 18, w - 36, h - 36);
+  ctx.strokeStyle = "rgba(255,255,255,0.28)";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(20, 20, w - 40, h - 40);
 
   const tex = new THREE.CanvasTexture(cnv);
   if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
+  tex.needsUpdate = true;
   return tex;
 }
 
 const cardGeo = new THREE.PlaneGeometry(2.9, 1.82, 1, 1);
 const cards = PROJECTS.map((project, i) => {
   const map = makeCardTexture(project);
-  const mat = new THREE.MeshPhysicalMaterial({
+  const mat = new THREE.MeshBasicMaterial({
     map,
-    color: 0xffffff,
-    roughness: 0.22,
-    metalness: 0.08,
-    transmission: 0.55,
-    thickness: 0.35,
     transparent: true,
-    opacity: 0.92,
+    opacity: 0.94,
     side: THREE.DoubleSide,
     depthWrite: false,
-    emissive: new THREE.Color().setHSL(project.hue / 360, 0.5, 0.12),
-    emissiveIntensity: 0.35,
   });
   const mesh = new THREE.Mesh(cardGeo, mat);
   mesh.userData = { id: project.id, index: i, project };
@@ -276,7 +270,7 @@ canvas.addEventListener("pointerdown", (e) => {
   if (hit) openCase(hit.object.userData.id);
 });
 
-const count = mobile ? 3200 : 11000;
+const count = mobile ? 2200 : 6500;
 const positions = new Float32Array(count * 3);
 const seeds = new Float32Array(count);
 const sizes = new Float32Array(count);
@@ -346,9 +340,9 @@ const pMat = new THREE.ShaderMaterial({
       float fx = (fract(seed * 7.13) - 0.5) * 9.0;
       float fz = (fract(seed * 3.91) - 0.5) * 5.5;
       vec3 rain = vec3(fx, 4.0 - fall * 9.5, fz);
-      q = mix(q, rain, gallery * 0.92);
+      q = mix(q, rain, gallery * 0.55);
       vec3 scatter = vec3((fract(seed * 4.2) - 0.5) * 6.5, (fract(seed * 2.9) - 0.5) * 3.2, -0.4 - fract(seed * 8.1) * 2.5);
-      q = mix(q, scatter, gallery * 0.28);
+      q = mix(q, scatter, gallery * 0.18);
       float ang = seed * 18.0 + uTime * 0.6;
       float rad = 0.45 + fract(seed * 4.4) * 1.2;
       q = mix(q, vec3(cos(ang) * rad, (fract(seed * 9.0) - 0.5) * 3.0, sin(ang) * rad), lab);
@@ -356,8 +350,8 @@ const pMat = new THREE.ShaderMaterial({
       q.y += uPointer.y * 0.38;
       vec4 mv = modelViewMatrix * vec4(q, 1.0);
       gl_Position = projectionMatrix * mv;
-      float sz = aSize * (1.0 + burst * 1.6 + gallery * 0.9);
-      gl_PointSize = clamp(sz * (280.0 / max(1.0, -mv.z)), 0.8, 18.0);
+      float sz = aSize * (1.0 + burst * 1.2 + gallery * 0.35);
+      gl_PointSize = clamp(sz * (220.0 / max(1.0, -mv.z)), 0.6, 11.0);
       vAlpha = smoothstep(32.0, 1.5, -mv.z) * (0.7 + 0.3 * sin(uTime * 2.2 + seed * 12.0));
     }
   `,
@@ -369,10 +363,10 @@ const pMat = new THREE.ShaderMaterial({
       vec2 uv = gl_PointCoord - 0.5;
       float d = length(uv);
       if (d > 0.5) discard;
-      float core = pow(smoothstep(0.5, 0.0, d), 1.55);
-      float halo = pow(smoothstep(0.5, 0.0, d), 0.5) * 0.4;
-      vec3 col = vColor * (1.2 + core * 1.0);
-      gl_FragColor = vec4(col, (core + halo) * vAlpha);
+      float core = pow(smoothstep(0.5, 0.0, d), 1.8);
+      float halo = pow(smoothstep(0.5, 0.0, d), 0.65) * 0.22;
+      vec3 col = vColor * (0.85 + core * 0.55);
+      gl_FragColor = vec4(col, (core + halo) * vAlpha * 0.72);
     }
   `,
 });
@@ -484,8 +478,9 @@ function frame() {
   const s = 0.12 + Math.max(intro, outro) * 1.2 + burst * 1.6 + midGlow;
   loop.scale.setScalar(s);
   loop.rotation.y = t * 0.16;
-  loop.visible = s > 0.12;
-  loopMat.opacity = Math.min(1, Math.max(intro, outro) + burst * 0.5 + midGlow);
+  const loopShow = Math.max(intro, outro, burst * 0.35);
+  loop.visible = loopShow > 0.08;
+  loopMat.opacity = Math.min(0.9, loopShow);
 
   const { local, list } = focusAt(p);
   const f = local * Math.max(0, list.length - 1);
@@ -517,8 +512,7 @@ function frame() {
     mesh.scale.setScalar(Math.max(0.0001, mesh.scale.x + (sc - mesh.scale.x) * 0.1));
 
     const active = match && Math.abs(delta) < 0.55 ? 1 : 0;
-    mesh.material.emissiveIntensity += (0.25 + active * 0.55 - mesh.material.emissiveIntensity) * 0.08;
-    mesh.material.opacity = 0.75 + active * 0.2;
+    mesh.material.opacity = 0.72 + active * 0.26;
   });
 
   const labIn =
