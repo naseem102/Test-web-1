@@ -152,7 +152,7 @@ const updateMobile = () => { mobile = (window.innerWidth || document.documentEle
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.35 : 1.75));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+renderer.toneMappingExposure = 1.28;
 renderer.setClearColor(0x07080c);
 
 const scene = new THREE.Scene();
@@ -170,7 +170,7 @@ addPoint(0xffc27a, 3.2, 2.2, 4, 40);
 addPoint(0xff4d9a, -3.4, -0.6, 3, 28);
 addPoint(0x9ad7ff, 0, 2.6, 1, 18);
 
-const count = mobile ? 1600 : 5000;
+const count = mobile ? 2800 : 9000;
 const positions = new Float32Array(count * 3);
 const seeds = new Float32Array(count);
 const sizes = new Float32Array(count);
@@ -217,35 +217,42 @@ const pMat = new THREE.ShaderMaterial({
     varying vec3 vColor; varying float vAlpha;
     void main(){
       vColor=aColor; float seed=aSeed; vec3 p=position;
-      float spin=uTime*(0.16+seed*0.05); float cs=cos(spin), sn=sin(spin);
+      float spin=uTime*(0.14+seed*0.06); float cs=cos(spin), sn=sin(spin);
       vec3 q=vec3(p.x*cs-p.z*sn,p.y,p.x*sn+p.z*cs);
-      float intro=1.0-smoothstep(0.02,0.30,uProgress);
-      float burst=smoothstep(0.05,0.22,uProgress)*(1.0-smoothstep(0.30,0.50,uProgress));
-      float gallery=smoothstep(0.38,0.54,uProgress)*(1.0-smoothstep(0.74,0.88,uProgress));
-      float lab=smoothstep(0.72,0.90,uProgress)*(1.0-smoothstep(0.94,1.0,uProgress));
-      float outro=smoothstep(0.90,1.0,uProgress);
-      float t=seed*6.2831853+uTime*0.32; float s=sin(t), c=cos(t), den=1.0+s*s;
-      vec3 loop=vec3((c/den)*2.55,(s*c/den)*2.55,sin(t*2.0)*0.22);
-      q=mix(q,loop,max(intro,outro)*0.94);
-      q+=normalize(p+0.001)*burst*(1.2+seed*2.8);
-      q.y+=sin(uTime*1.5+seed*24.0)*burst*0.45;
-      float hold=smoothstep(0.18,0.28,uProgress)*(1.0-smoothstep(0.42,0.55,uProgress));
-      q=mix(q,p*0.85,hold*0.55);
-      q=mix(q,vec3((fract(seed*7.13)-0.5)*5.5,(fract(seed*3.71)-0.5)*2.8,-0.3-fract(seed*11.2)*2.2),gallery);
-      float ang=seed*18.0+uTime*0.5; float rad=0.35+fract(seed*4.4)*0.85;
-      q=mix(q,vec3(cos(ang)*rad,(fract(seed*9.0)-0.5)*2.7,sin(ang)*rad),lab);
-      q.x+=uPointer.x*0.5; q.y+=uPointer.y*0.28;
+      float intro=1.0-smoothstep(0.0,0.22,uProgress);
+      float burst=smoothstep(0.04,0.18,uProgress)*(1.0-smoothstep(0.26,0.42,uProgress));
+      float studio=smoothstep(0.16,0.28,uProgress)*(1.0-smoothstep(0.40,0.52,uProgress));
+      float gallery=smoothstep(0.36,0.50,uProgress)*(1.0-smoothstep(0.70,0.82,uProgress));
+      float lab=smoothstep(0.68,0.82,uProgress)*(1.0-smoothstep(0.90,0.98,uProgress));
+      float outro=smoothstep(0.88,1.0,uProgress);
+      float t=seed*6.2831853+uTime*0.28; float s=sin(t), c=cos(t), den=1.0+s*s;
+      vec3 loop=vec3((c/den)*2.8,(s*c/den)*2.8,sin(t*2.0)*0.28);
+      q=mix(q,loop,max(intro,outro)*0.96);
+      q+=normalize(p+0.001)*burst*(2.2+seed*4.5);
+      q.y+=sin(uTime*1.8+seed*20.0)*burst*0.85;
+      q=mix(q, p*1.05 + vec3(sin(uTime*0.4+seed*9.0)*0.35, cos(uTime*0.3+seed*5.0)*0.25, 0.0), studio*0.7);
+      float fall = fract(seed*13.7 + uTime*0.12);
+      vec3 rain = vec3((fract(seed*7.13)-0.5)*7.5, 3.2 - fall*7.5, (fract(seed*3.1)-0.5)*4.0);
+      q=mix(q, rain, gallery*0.85);
+      q=mix(q, vec3((fract(seed*4.2)-0.5)*5.0, (fract(seed*2.9)-0.5)*2.6, -0.5-fract(seed*8.1)*2.0), gallery*0.35);
+      float ang=seed*18.0+uTime*0.55; float rad=0.4+fract(seed*4.4)*1.1;
+      q=mix(q,vec3(cos(ang)*rad,(fract(seed*9.0)-0.5)*2.9,sin(ang)*rad),lab);
+      q.x+=uPointer.x*0.65; q.y+=uPointer.y*0.35;
       vec4 mv=modelViewMatrix*vec4(q,1.0);
       gl_Position=projectionMatrix*mv;
-      gl_PointSize=clamp(aSize*(220.0/max(1.0,-mv.z)),0.6,12.0);
-      vAlpha=smoothstep(28.0,2.0,-mv.z);
+      float sz = aSize * (1.0 + burst*1.4 + gallery*0.6);
+      gl_PointSize=clamp(sz*(260.0/max(1.0,-mv.z)),0.7,16.0);
+      vAlpha=smoothstep(30.0,1.8,-mv.z)*(0.75+0.25*sin(uTime*2.0+seed*10.0));
     }`,
   fragmentShader: `
     precision highp float; varying vec3 vColor; varying float vAlpha;
     void main(){
       vec2 uv=gl_PointCoord-0.5; float d=length(uv);
       if(d>0.5) discard;
-      gl_FragColor=vec4(vColor, pow(smoothstep(0.5,0.0,d),1.35)*vAlpha);
+      float core = pow(smoothstep(0.5,0.0,d), 1.6);
+      float halo = pow(smoothstep(0.5,0.0,d), 0.55)*0.35;
+      vec3 col = vColor * (1.15 + core*0.9);
+      gl_FragColor=vec4(col, (core+halo)*vAlpha);
     }`,
 });
 scene.add(new THREE.Points(pGeo, pMat));
@@ -269,22 +276,45 @@ const loop = new THREE.Mesh(makeLoopGeo(), loopMat);
 scene.add(loop);
 
 const cardFrag = `
-  precision highp float; varying vec2 vUv; uniform float uTime; uniform float uVariant; uniform float uActive;
+  precision highp float; varying vec2 vUv;
+  uniform float uTime; uniform float uVariant; uniform float uActive;
   float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
   float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
     return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y); }
-  float fbm(vec2 p){ float v=0.,a=.5; for(int i=0;i<4;i++){ v+=a*noise(p); p*=2.1; a*=.5; } return v; }
+  float fbm(vec2 p){ float v=0.,a=.5; for(int i=0;i<5;i++){ v+=a*noise(p); p*=2.15; a*=.5; } return v; }
   void main(){
-    vec2 uv=vUv; float n=fbm(uv*3.2+uTime*.12); vec3 col;
-    if(uVariant<0.5){ col=vec3(.08,.12,.2)+vec3(.5,.7,1.)*n+vec3(1.,.7,.3)*pow(n,3.); }
-    else if(uVariant<1.5){ col=vec3(.12,.05,.14)+vec3(1.,.3,.6)*n+vec3(.9,.9,1.)*pow(1.-abs(uv.y-.5)*2.,4.)*.4; }
-    else if(uVariant<2.5){ float r=length(uv-.5); col=vec3(.05,.08,.12)+vec3(.6,.9,1.)*smoothstep(.5,.1,r)*n*2.; }
-    else if(uVariant<3.5){ col=vec3(.04,.1,.12)+vec3(.2,1.,.7)*n+vec3(1.,.8,.3)*step(.85,fract(uv.x*8.+uTime)); }
-    else { float g=smoothstep(.08,0.,min(abs(fract(uv.x*16.)-.5),abs(fract(uv.y*9.)-.5))); col=vec3(.05,.02,.01)+vec3(1.,.4,.08)*g+vec3(1.,.6,.15)*n; }
-    vec2 r=abs(uv*2.-1.)-vec2(.9); float dist=length(max(r,0.))+min(max(r.x,r.y),0.)-.1;
-    float mask=smoothstep(.02,0.,dist);
-    col+=vec3(1.,.93,.82)*smoothstep(.08,0.,abs(dist))*(.3+uActive);
-    if(mask<.02) discard; gl_FragColor=vec4(col,mask);
+    vec2 uv=vUv;
+    float n=fbm(uv*3.6+uTime*.15);
+    float n2=fbm(uv*8.0-uTime*.08);
+    vec3 col;
+    if(uVariant<0.5){
+      col=vec3(0.06,0.10,0.18)+vec3(0.45,0.75,1.0)*n+vec3(1.0,0.75,0.35)*pow(n,3.0);
+      col+=vec3(0.6,0.85,1.0)*pow(1.0-abs(uv.y-0.5)*2.0,6.0)*0.25;
+    } else if(uVariant<1.5){
+      col=vec3(0.12,0.04,0.14)+vec3(1.0,0.28,0.62)*n+vec3(0.95,0.9,1.0)*pow(1.0-abs(uv.y-.5)*2.,5.)*0.45;
+      col+=vec3(1.0,0.5,0.8)*n2*0.2;
+    } else if(uVariant<2.5){
+      float r=length(uv-0.5);
+      col=vec3(0.04,0.07,0.12)+vec3(0.55,0.9,1.0)*smoothstep(0.55,0.08,r)*n*2.2;
+      col+=vec3(0.8,0.95,1.0)*pow(smoothstep(0.5,0.0,r),3.0)*0.4;
+    } else if(uVariant<3.5){
+      col=vec3(0.03,0.09,0.11)+vec3(0.15,1.0,0.7)*n+vec3(1.0,0.85,0.3)*step(0.82,fract(uv.x*10.0+uTime*0.4))*0.5;
+      col+=vec3(0.2,0.9,0.8)*n2*0.25;
+    } else {
+      float g=smoothstep(0.07,0.0,min(abs(fract(uv.x*18.)-0.5),abs(fract(uv.y*11.)-0.5)));
+      col=vec3(0.05,0.02,0.01)+vec3(1.0,0.38,0.08)*g+vec3(1.0,0.65,0.2)*n;
+      col+=vec3(1.0,0.5,0.15)*n2*0.3;
+    }
+    vec2 r=abs(uv*2.0-1.0)-vec2(0.88);
+    float dist=length(max(r,0.0))+min(max(r.x,r.y),0.0)-0.12;
+    float mask=smoothstep(0.025,0.0,dist);
+    float rim=smoothstep(0.1,0.0,abs(dist));
+    col+=vec3(1.0,0.94,0.82)*rim*(0.35+uActive*0.85);
+    float sweep=smoothstep(0.0,0.15,abs(uv.x-fract(uTime*0.08)-0.1))*smoothstep(0.4,0.0,abs(uv.y-0.45));
+    col+=vec3(1.0)*sweep*0.12*(0.4+uActive);
+    col=mix(col, col*1.35+vec3(0.15,0.12,0.08), uActive*0.5);
+    if(mask<0.02) discard;
+    gl_FragColor=vec4(col, mask*(0.88+uActive*0.12));
   }`;
 
 const cards = PROJECTS.map((project) => {
@@ -299,7 +329,7 @@ const cards = PROJECTS.map((project) => {
       uActive: { value: 0 },
     },
   });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2.35, 1.48), mat);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 1.7), mat);
   mesh.userData = { id: project.id };
   scene.add(mesh);
   return mesh;
@@ -401,8 +431,8 @@ function frame() {
   const burst =
     Math.min(1, Math.max(0, (p - 0.06) / 0.14)) *
     (1 - Math.min(1, Math.max(0, (p - 0.28) / 0.18)));
-  const midGlow = Math.min(1, Math.max(0, (p - 0.3) / 0.15)) * (1 - Math.min(1, Math.max(0, (p - 0.7) / 0.15))) * 0.35;
-  const s = 0.12 + Math.max(intro, outro) * 1.05 + burst * 1.35 + midGlow;
+  const midGlow = Math.min(1, Math.max(0, (p - 0.25) / 0.18)) * (1 - Math.min(1, Math.max(0, (p - 0.68) / 0.16))) * 0.55;
+  const s = 0.15 + Math.max(intro, outro) * 1.15 + burst * 1.55 + midGlow;
   loop.scale.setScalar(s);
   loop.rotation.y = t * 0.18;
   loop.visible = s > 0.15;
@@ -414,16 +444,16 @@ function frame() {
   const gallery =
     Math.min(1, Math.max(0, (p - 0.32) / 0.14)) *
     (1 - Math.min(1, Math.max(0, (p - 0.74) / 0.12)));
-  const spread = mobile ? 1.7 : 2.65;
+  const spread = mobile ? 2.0 : 3.15;
 
   cards.forEach((mesh, i) => {
     const idx = list.findIndex((item) => item.id === PROJECTS[i].id);
     const match = idx >= 0;
     const delta = match ? idx - f : 0;
     mesh.position.x += (delta * spread + world.sx * 0.18 - mesh.position.x) * 0.08;
-    mesh.position.y += ((match ? 0.72 : -2) + world.sy * 0.1 - mesh.position.y) * 0.08;
+    mesh.position.y += ((match ? 0.55 : -2.4) + world.sy * 0.12 - mesh.position.y) * 0.09;
     mesh.position.z += (-Math.abs(delta) * 0.9 - mesh.position.z) * 0.08;
-    mesh.rotation.y += (delta * -0.38 - mesh.rotation.y) * 0.08;
+    mesh.rotation.y += (delta * -0.48 - mesh.rotation.y) * 0.09;
     const sc = match
       ? (1.02 - Math.min(Math.abs(delta), 1.4) * 0.16) * (0.15 + gallery * 0.85)
       : 0.001;
@@ -441,23 +471,23 @@ function frame() {
   heart.rotation.y = t * 0.35;
 
   const zTarget =
-    7.5 -
-    Math.min(1, p / 0.4) * 0.7 -
-    labIn * 1.7 +
-    Math.min(1, Math.max(0, (p - 0.9) / 0.1)) * 1.3;
+    7.8 -
+    Math.min(1, p / 0.35) * 1.0 -
+    labIn * 2.1 +
+    Math.min(1, Math.max(0, (p - 0.88) / 0.1)) * 1.5;
   camera.position.z += (zTarget - camera.position.z) * 0.06;
   camera.position.x += (world.sx * 0.55 - camera.position.x) * 0.06;
   camera.lookAt(world.sx * 0.15, 0, 0);
 
   const chapter =
-    p < 0.16 ? "intro" : p < 0.4 ? "manifesto" : p < 0.72 ? "work" : p < 0.9 ? "lab" : "contact";
+    p < 0.14 ? "intro" : p < 0.38 ? "manifesto" : p < 0.70 ? "work" : p < 0.88 ? "lab" : "contact";
 
-  $("hero").style.opacity = String(fade(p, 0, 0.01, 0.14, 0.28));
-  $("manifesto").style.opacity = String(fade(p, 0.12, 0.22, 0.38, 0.52));
-  $("work").style.opacity = String(fade(p, 0.36, 0.48, 0.72, 0.84));
-  $("finder").style.opacity = String(fade(p, 0.36, 0.48, 0.72, 0.84));
-  $("lab-copy").style.opacity = String(fade(p, 0.68, 0.78, 0.9, 0.98));
-  $("contact").style.opacity = String(fade(p, 0.86, 0.93, 1.15, 1.25));
+  $("hero").style.opacity = String(fade(p, 0, 0.02, 0.12, 0.24));
+  $("manifesto").style.opacity = String(fade(p, 0.14, 0.24, 0.38, 0.50));
+  $("work").style.opacity = String(fade(p, 0.38, 0.50, 0.70, 0.82));
+  $("finder").style.opacity = String(fade(p, 0.38, 0.50, 0.70, 0.82));
+  $("lab-copy").style.opacity = String(fade(p, 0.68, 0.78, 0.88, 0.96));
+  $("contact").style.opacity = String(fade(p, 0.86, 0.92, 1.1, 1.2));
 
   $("manifesto").classList.toggle("hidden", chapter !== "manifesto");
   $("finder").classList.toggle("hidden", chapter !== "work");
