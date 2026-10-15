@@ -98,354 +98,350 @@ function openCase(id) {
 $("open-case").onclick = () => openCase(focusId);
 $("d-close").onclick = () => $("dialog").classList.remove("open");
 $("dialog").onclick = (e) => {
-  if (e.target === $("dialog")) $("dialog").classList.remove("open");
+  if (e.target.id === "dialog") $("dialog").classList.remove("open");
 };
 
 $("signal").onsubmit = (e) => {
   e.preventDefault();
-  const fd = new FormData(e.target);
-  const payload = { name: fd.get("name"), idea: fd.get("idea"), at: Date.now() };
-  try {
-    const prev = JSON.parse(localStorage.getItem("velora-signals") || "[]");
-    prev.push(payload);
-    localStorage.setItem("velora-signals", JSON.stringify(prev.slice(-20)));
-  } catch (_) {}
-  e.target.reset();
-  e.target.innerHTML = `<p class="sent">Signal received. We'll answer soon.</p><button type="button" id="again">Send another</button>`;
-  $("again").onclick = () => location.reload();
+  const data = new FormData(e.target);
+  const name = String(data.get("name") || "").trim();
+  const idea = String(data.get("idea") || "").trim();
+  if (!name || !idea) return;
+  const note = `${name} — ${idea}`;
+  localStorage.setItem("velora-signal", note);
+  e.target.outerHTML = `<div class="sent"><p class="eyebrow">Signal kept</p><p>${note.replace(/</g, "<")}</p></div>`;
 };
 
-addEventListener("keydown", (e) => {
-  if (e.key === "Escape") $("dialog").classList.remove("open");
-  if (e.key === "ArrowDown" || e.key === "PageDown") go(Math.min(1, world.p + 0.12));
-  if (e.key === "ArrowUp" || e.key === "PageUp") go(Math.max(0, world.p - 0.12));
-});
+addEventListener("scroll", () => {
+  const max = document.documentElement.scrollHeight - innerHeight;
+  world.target = max <= 0 ? 0 : scrollY / max;
+}, { passive: true });
 
 addEventListener("pointermove", (e) => {
   world.mx = (e.clientX / innerWidth) * 2 - 1;
-  world.my = (e.clientY / innerHeight) * 2 - 1;
+  world.my = -((e.clientY / innerHeight) * 2 - 1);
+}, { passive: true });
+
+addEventListener("keydown", (e) => {
+  const tag = (e.target && e.target.tagName) || "";
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  if (e.key === "Escape") $("dialog").classList.remove("open");
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    window.scrollBy({ top: innerHeight * 0.72, behavior: "smooth" });
+  }
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    window.scrollBy({ top: -innerHeight * 0.72, behavior: "smooth" });
+  }
 });
 
-// ——— Three.js scene ———
+if (typeof THREE === "undefined") {
+  $("veil").querySelector("p").textContent = "Three.js failed to load";
+  throw new Error("THREE missing");
+}
+
 const canvas = $("c");
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,
+  powerPreference: "high-performance",
+});
+let mobile = innerWidth < 760;
+const updateMobile = () => { mobile = (window.innerWidth || document.documentElement.clientWidth) < 760; };
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.35 : 1.75));
 renderer.setSize(innerWidth, innerHeight);
-renderer.setClearColor(0x07080c, 1);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.12;
+renderer.setClearColor(0x07080c);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 80);
-camera.position.set(0, 0, 6.2);
+scene.fog = new THREE.FogExp2(0x07080c, 0.055);
+const camera = new THREE.PerspectiveCamera(37, innerWidth / innerHeight, 0.1, 48);
+camera.position.set(0, 0.2, 7.5);
 
-const clock = new THREE.Clock();
+scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+const addPoint = (c, x, y, z, i) => {
+  const l = new THREE.PointLight(c, i, 20);
+  l.position.set(x, y, z);
+  scene.add(l);
+};
+addPoint(0xffc27a, 3.2, 2.2, 4, 40);
+addPoint(0xff4d9a, -3.4, -0.6, 3, 28);
+addPoint(0x9ad7ff, 0, 2.6, 1, 18);
 
-// Particles
-const COUNT = 4200;
-const pos = new Float32Array(COUNT * 3);
-const phase = new Float32Array(COUNT);
-const size = new Float32Array(COUNT);
-for (let i = 0; i < COUNT; i++) {
-  const i3 = i * 3;
-  const r = 0.4 + Math.random() * 4.8;
+const count = mobile ? 1600 : 5000;
+const positions = new Float32Array(count * 3);
+const seeds = new Float32Array(count);
+const sizes = new Float32Array(count);
+const colors = new Float32Array(count * 3);
+const palette = [
+  [0.97, 0.78, 0.45],
+  [1, 0.96, 0.9],
+  [1, 0.38, 0.62],
+  [0.45, 0.9, 0.72],
+  [0.65, 0.78, 1],
+];
+for (let i = 0; i < count; i++) {
+  const r = Math.cbrt(Math.random()) * 3.4;
   const th = Math.random() * Math.PI * 2;
-  const ph = (Math.random() - 0.5) * Math.PI;
-  pos[i3] = r * Math.cos(th) * Math.cos(ph);
-  pos[i3 + 1] = r * Math.sin(ph) * 0.7;
-  pos[i3 + 2] = r * Math.sin(th) * Math.cos(ph);
-  phase[i] = Math.random() * Math.PI * 2;
-  size[i] = 0.6 + Math.random() * 1.8;
+  const ph = Math.acos(2 * Math.random() - 1);
+  positions[i * 3] = r * Math.sin(ph) * Math.cos(th);
+  positions[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+  positions[i * 3 + 2] = r * Math.cos(ph);
+  seeds[i] = Math.random();
+  sizes[i] = 0.7 + Math.random() * 2.4;
+  const col = palette[i % 5];
+  colors[i * 3] = col[0];
+  colors[i * 3 + 1] = col[1];
+  colors[i * 3 + 2] = col[2];
 }
 const pGeo = new THREE.BufferGeometry();
-pGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-pGeo.setAttribute("aPhase", new THREE.BufferAttribute(phase, 1));
-pGeo.setAttribute("aSize", new THREE.BufferAttribute(size, 1));
+pGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+pGeo.setAttribute("aSeed", new THREE.BufferAttribute(seeds, 1));
+pGeo.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
+pGeo.setAttribute("aColor", new THREE.BufferAttribute(colors, 3));
 
 const pMat = new THREE.ShaderMaterial({
-  transparent: true,
-  depthWrite: false,
-  blending: THREE.AdditiveBlending,
   uniforms: {
     uTime: { value: 0 },
     uProgress: { value: 0 },
-    uPixelRatio: { value: Math.min(devicePixelRatio, 2) }
+    uPointer: { value: new THREE.Vector2() },
   },
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
   vertexShader: `
-    attribute float aPhase;
-    attribute float aSize;
-    uniform float uTime;
-    uniform float uProgress;
-    uniform float uPixelRatio;
-    varying float vAlpha;
-    varying vec3 vCol;
-    void main() {
-      vec3 p = position;
-      float t = uTime * 0.35 + aPhase;
-      float intro = smoothstep(0.0, 0.18, uProgress);
-      float burst = smoothstep(0.12, 0.32, uProgress) * (1.0 - smoothstep(0.38, 0.55, uProgress));
-      float gallery = smoothstep(0.4, 0.55, uProgress) * (1.0 - smoothstep(0.7, 0.82, uProgress));
-      float lab = smoothstep(0.7, 0.85, uProgress);
-      float outro = smoothstep(0.9, 1.0, uProgress);
-
-      // soft swirl
-      float ang = t * 0.4 + p.y * 0.3;
-      p.xz = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * p.xz;
-
-      // intro expand
-      p *= mix(0.15, 1.0, intro);
-
-      // burst outward
-      p += normalize(p + 0.001) * burst * 2.4 * (0.5 + 0.5 * sin(aPhase * 3.0));
-
-      // gallery — settle into vertical ribbons
-      float ribbon = sin(p.x * 1.8 + t) * 0.35 * gallery;
-      p.y += ribbon;
-      p.x *= mix(1.0, 0.55, gallery);
-
-      // lab — collapse toward center heart-ish
-      float heart = lab * (1.0 - length(p.xz) * 0.18);
-      p *= mix(1.0, 0.35 + heart * 0.4, lab);
-      p.y += lab * 0.6 * sin(aPhase + t * 2.0);
-
-      // outro drift
-      p.y += outro * 1.8 * (aPhase - 1.5);
-      p.x += outro * sin(aPhase) * 0.8;
-
-      vec4 mv = modelViewMatrix * vec4(p, 1.0);
-      gl_Position = projectionMatrix * mv;
-      float s = aSize * (1.0 + burst * 1.4) * (1.0 - outro * 0.5);
-      gl_PointSize = s * uPixelRatio * (180.0 / -mv.z);
-      vAlpha = (0.35 + 0.45 * intro) * (1.0 - outro * 0.7) * (0.55 + 0.45 * gallery + 0.3 * lab);
-      vCol = mix(vec3(0.9, 0.75, 0.45), vec3(1.0, 0.35, 0.65), aPhase / 6.28);
-      vCol = mix(vCol, vec3(0.7, 0.85, 1.0), lab * 0.5);
-    }
-  `,
+    attribute float aSeed; attribute float aSize; attribute vec3 aColor;
+    uniform float uTime; uniform float uProgress; uniform vec2 uPointer;
+    varying vec3 vColor; varying float vAlpha;
+    void main(){
+      vColor=aColor; float seed=aSeed; vec3 p=position;
+      float spin=uTime*(0.16+seed*0.05); float cs=cos(spin), sn=sin(spin);
+      vec3 q=vec3(p.x*cs-p.z*sn,p.y,p.x*sn+p.z*cs);
+      float intro=1.0-smoothstep(0.02,0.30,uProgress);
+      float burst=smoothstep(0.05,0.22,uProgress)*(1.0-smoothstep(0.30,0.50,uProgress));
+      float gallery=smoothstep(0.38,0.54,uProgress)*(1.0-smoothstep(0.74,0.88,uProgress));
+      float lab=smoothstep(0.72,0.90,uProgress)*(1.0-smoothstep(0.94,1.0,uProgress));
+      float outro=smoothstep(0.90,1.0,uProgress);
+      float t=seed*6.2831853+uTime*0.32; float s=sin(t), c=cos(t), den=1.0+s*s;
+      vec3 loop=vec3((c/den)*2.55,(s*c/den)*2.55,sin(t*2.0)*0.22);
+      q=mix(q,loop,max(intro,outro)*0.94);
+      q+=normalize(p+0.001)*burst*(1.6+seed*4.4);
+      q.y+=sin(uTime*1.5+seed*24.0)*burst*0.6;
+      q=mix(q,vec3((fract(seed*7.13)-0.5)*12.0,(fract(seed*3.71)-0.5)*5.2,-1.2-fract(seed*11.2)*5.5),gallery);
+      float ang=seed*18.0+uTime*0.5; float rad=0.35+fract(seed*4.4)*0.85;
+      q=mix(q,vec3(cos(ang)*rad,(fract(seed*9.0)-0.5)*2.7,sin(ang)*rad),lab);
+      q.x+=uPointer.x*0.5; q.y+=uPointer.y*0.28;
+      vec4 mv=modelViewMatrix*vec4(q,1.0);
+      gl_Position=projectionMatrix*mv;
+      gl_PointSize=clamp(aSize*(220.0/max(1.0,-mv.z)),0.6,12.0);
+      vAlpha=smoothstep(20.0,3.5,-mv.z);
+    }`,
   fragmentShader: `
-    varying float vAlpha;
-    varying vec3 vCol;
-    void main() {
-      vec2 uv = gl_PointCoord - 0.5;
-      float d = length(uv);
-      if (d > 0.5) discard;
-      float soft = 1.0 - smoothstep(0.15, 0.5, d);
-      gl_FragColor = vec4(vCol, vAlpha * soft);
-    }
-  `
+    precision highp float; varying vec3 vColor; varying float vAlpha;
+    void main(){
+      vec2 uv=gl_PointCoord-0.5; float d=length(uv);
+      if(d>0.5) discard;
+      gl_FragColor=vec4(vColor, pow(smoothstep(0.5,0.0,d),1.35)*vAlpha);
+    }`,
 });
-const particles = new THREE.Points(pGeo, pMat);
-scene.add(particles);
+scene.add(new THREE.Points(pGeo, pMat));
 
-// Infinity / figure-8 loop
-const loopPts = [];
-for (let i = 0; i <= 240; i++) {
-  const t = (i / 240) * Math.PI * 2;
-  const scale = 1.65;
-  const x = scale * Math.sin(t);
-  const y = scale * Math.sin(t) * Math.cos(t) * 0.55;
-  const z = scale * Math.cos(t) * 0.35;
-  loopPts.push(new THREE.Vector3(x, y, z));
+function makeLoopGeo() {
+  const pts = [];
+  for (let i = 0; i <= 220; i++) {
+    const t = (i / 220) * Math.PI * 2;
+    const s = Math.sin(t), c = Math.cos(t), d = 1 + s * s;
+    pts.push(new THREE.Vector3((c / d) * 2.55, (s * c / d) * 2.55, Math.sin(t * 2) * 0.22));
+  }
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 220, 0.018, 8, true);
 }
-const loopGeo = new THREE.BufferGeometry().setFromPoints(loopPts);
-const loopMat = new THREE.LineBasicMaterial({ color: 0xe7c27a, transparent: true, opacity: 0.55 });
-const loop = new THREE.Line(loopGeo, loopMat);
+const loopMat = new THREE.MeshBasicMaterial({
+  color: 0xe7c27a,
+  transparent: true,
+  opacity: 0.85,
+  depthWrite: false,
+});
+const loop = new THREE.Mesh(makeLoopGeo(), loopMat);
 scene.add(loop);
 
-// Holographic glass cards
-const cardGroup = new THREE.Group();
-scene.add(cardGroup);
-const cardMats = [];
-const cardMeshes = [];
-const CARD_COUNT = 5;
+const cardFrag = `
+  precision highp float; varying vec2 vUv; uniform float uTime; uniform float uVariant; uniform float uActive;
+  float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+  float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+    return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y); }
+  float fbm(vec2 p){ float v=0.,a=.5; for(int i=0;i<4;i++){ v+=a*noise(p); p*=2.1; a*=.5; } return v; }
+  void main(){
+    vec2 uv=vUv; float n=fbm(uv*3.2+uTime*.12); vec3 col;
+    if(uVariant<0.5){ col=vec3(.08,.12,.2)+vec3(.5,.7,1.)*n+vec3(1.,.7,.3)*pow(n,3.); }
+    else if(uVariant<1.5){ col=vec3(.12,.05,.14)+vec3(1.,.3,.6)*n+vec3(.9,.9,1.)*pow(1.-abs(uv.y-.5)*2.,4.)*.4; }
+    else if(uVariant<2.5){ float r=length(uv-.5); col=vec3(.05,.08,.12)+vec3(.6,.9,1.)*smoothstep(.5,.1,r)*n*2.; }
+    else if(uVariant<3.5){ col=vec3(.04,.1,.12)+vec3(.2,1.,.7)*n+vec3(1.,.8,.3)*step(.85,fract(uv.x*8.+uTime)); }
+    else { float g=smoothstep(.08,0.,min(abs(fract(uv.x*16.)-.5),abs(fract(uv.y*9.)-.5))); col=vec3(.05,.02,.01)+vec3(1.,.4,.08)*g+vec3(1.,.6,.15)*n; }
+    vec2 r=abs(uv*2.-1.)-vec2(.9); float dist=length(max(r,0.))+min(max(r.x,r.y),0.)-.1;
+    float mask=smoothstep(.02,0.,dist);
+    col+=vec3(1.,.93,.82)*smoothstep(.08,0.,abs(dist))*(.3+uActive);
+    if(mask<.02) discard; gl_FragColor=vec4(col,mask);
+  }`;
 
-function makeCard(variant) {
-  const geo = new THREE.PlaneGeometry(1.4, 1.9, 1, 1);
+const cards = PROJECTS.map((project) => {
   const mat = new THREE.ShaderMaterial({
     transparent: true,
-    side: THREE.DoubleSide,
     depthWrite: false,
+    vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader: cardFrag,
     uniforms: {
       uTime: { value: 0 },
+      uVariant: { value: project.v },
       uActive: { value: 0 },
-      uVariant: { value: variant }
     },
-    vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform float uTime;
-      uniform float uActive;
-      uniform float uVariant;
-      varying vec2 vUv;
-      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-      float noise(vec2 p) {
-        vec2 i = floor(p); vec2 f = fract(p);
-        float a = hash(i); float b = hash(i + vec2(1.0, 0.0));
-        float c = hash(i + vec2(0.0, 1.0)); float d = hash(i + vec2(1.0, 1.0));
-        vec2 u = f * f * (3.0 - 2.0 * f);
-        return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
-      }
-      float fbm(vec2 p) {
-        float v = 0.0; float a = 0.5;
-        for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.1; a *= 0.5; }
-        return v;
-      }
-      // rounded rect SDF
-      float sdRoundBox(vec2 p, vec2 b, float r) {
-        vec2 q = abs(p) - b + r;
-        return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
-      }
-      void main() {
-        vec2 uv = vUv;
-        vec2 p = (uv - 0.5) * 2.0;
-        float d = sdRoundBox(p, vec2(0.92, 0.94), 0.12);
-        if (d > 0.02) discard;
-        float edge = 1.0 - smoothstep(-0.02, 0.02, d);
-        float n = fbm(uv * 4.0 + uTime * 0.15 + uVariant);
-        float n2 = fbm(uv * 7.0 - uTime * 0.1);
-        vec3 colA = vec3(0.15, 0.12, 0.2);
-        vec3 colB = mix(vec3(0.9, 0.7, 0.4), vec3(1.0, 0.3, 0.6), uVariant * 0.25);
-        vec3 col = mix(colA, colB, n * 0.55 + 0.2);
-        col += vec3(0.2, 0.35, 0.55) * n2 * 0.35;
-        // scanlines + holographic sheen
-        float scan = 0.92 + 0.08 * sin(uv.y * 90.0 + uTime * 3.0);
-        float sheen = pow(1.0 - abs(p.x * 0.7 + p.y * 0.3), 3.0) * (0.35 + 0.4 * uActive);
-        col *= scan;
-        col += sheen * vec3(0.95, 0.85, 0.7);
-        float alpha = edge * (0.55 + 0.35 * uActive + 0.15 * n);
-        // dark backing so text overlay reads
-        float back = smoothstep(0.5, -0.1, d) * 0.45;
-        col = mix(col, vec3(0.04, 0.05, 0.08), back);
-        gl_FragColor = vec4(col, alpha);
-      }
-    `
   });
-  const mesh = new THREE.Mesh(geo, mat);
-  cardMats.push(mat);
-  cardMeshes.push(mesh);
-  cardGroup.add(mesh);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2.35, 1.48), mat);
+  mesh.userData = { id: project.id };
+  scene.add(mesh);
   return mesh;
-}
-
-for (let i = 0; i < CARD_COUNT; i++) makeCard(i * 0.22);
-
-// Lab specimen — transmission-like cylinder + heart points
-const labGroup = new THREE.Group();
-scene.add(labGroup);
-const cylGeo = new THREE.CylinderGeometry(0.55, 0.55, 1.8, 48, 1, true);
-const cylMat = new THREE.MeshPhysicalMaterial({
-  color: 0x88aacc,
-  metalness: 0.05,
-  roughness: 0.12,
-  transmission: 0.85,
-  thickness: 0.6,
-  transparent: true,
-  opacity: 0.55,
-  side: THREE.DoubleSide
 });
-const cyl = new THREE.Mesh(cylGeo, cylMat);
-labGroup.add(cyl);
 
-const heartCount = 900;
-const hPos = new Float32Array(heartCount * 3);
-for (let i = 0; i < heartCount; i++) {
-  const t = Math.random() * Math.PI * 2;
-  const u = Math.random();
-  // parametric heart
-  const x = 16 * Math.pow(Math.sin(t), 3);
-  const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
-  const s = 0.028 * (0.7 + 0.3 * u);
-  hPos[i * 3] = x * s + (Math.random() - 0.5) * 0.08;
-  hPos[i * 3 + 1] = y * s + (Math.random() - 0.5) * 0.08;
-  hPos[i * 3 + 2] = (Math.random() - 0.5) * 0.25;
+const ray = new THREE.Raycaster();
+canvas.addEventListener("pointerdown", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const ndc = new THREE.Vector2(
+    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1
+  );
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(cards, false)[0];
+  if (hit) openCase(hit.object.userData.id);
+});
+
+const lab = new THREE.Group();
+lab.add(
+  new THREE.Mesh(
+    new THREE.CylinderGeometry(1.12, 1.12, 2.7, 40, 1, true),
+    new THREE.MeshPhysicalMaterial({
+      color: 0xd5ecff,
+      roughness: 0.08,
+      transmission: 0.86,
+      thickness: 0.4,
+      transparent: true,
+      opacity: 0.4,
+      side: THREE.DoubleSide,
+    })
+  )
+);
+const heartPts = [];
+for (let i = 0; i <= 200; i++) {
+  const t = (i / 200) * Math.PI * 2;
+  const s = Math.sin(t);
+  heartPts.push(
+    new THREE.Vector3(
+      16 * s * s * s * 0.042,
+      (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * 0.042,
+      0
+    )
+  );
 }
-const hGeo = new THREE.BufferGeometry();
-hGeo.setAttribute("position", new THREE.BufferAttribute(hPos, 3));
-const hMat = new THREE.PointsMaterial({ color: 0xff4d9a, size: 0.035, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending });
-const heart = new THREE.Points(hGeo, hMat);
-labGroup.add(heart);
-
-// soft floor grid for lab
-const floorGeo = new THREE.PlaneGeometry(8, 8, 28, 28);
-const floorMat = new THREE.MeshBasicMaterial({ color: 0x1a1c24, transparent: true, opacity: 0.35, wireframe: true });
-const floor = new THREE.Mesh(floorGeo, floorMat);
-floor.rotation.x = -Math.PI / 2;
-floor.position.y = -1.15;
-labGroup.add(floor);
-
-// ambient + key lights
-scene.add(new THREE.AmbientLight(0x334455, 0.55));
-const key = new THREE.DirectionalLight(0xffe0b0, 1.1);
-key.position.set(3, 4, 5);
-scene.add(key);
-const rim = new THREE.DirectionalLight(0x88aaff, 0.45);
-rim.position.set(-4, 1, -3);
-scene.add(rim);
-
-// scroll progress
-function updateProgress() {
-  const max = document.documentElement.scrollHeight - innerHeight;
-  world.target = max > 0 ? scrollY / max : 0;
-  world.p += (world.target - world.p) * 0.08;
+const heart = new THREE.Mesh(
+  new THREE.TubeGeometry(new THREE.CatmullRomCurve3(heartPts, true), 200, 0.012, 8, true),
+  new THREE.MeshStandardMaterial({ color: 0xffd0ea, emissive: 0xff4d9a, emissiveIntensity: 2.2 })
+);
+lab.add(heart);
+for (let i = 0; i < 8; i++) {
+  const a = (i / 8) * Math.PI * 2;
+  const y = (i - 3.5) * 0.28;
+  lab.add(
+    new THREE.Mesh(
+      new THREE.TubeGeometry(
+        new THREE.CatmullRomCurve3([
+          new THREE.Vector3(Math.cos(a) * 1.02, y, Math.sin(a) * 1.02),
+          new THREE.Vector3(Math.cos(a) * 2.1, y + 0.4, Math.sin(a) * 2.1),
+          new THREE.Vector3(Math.cos(a) * 3.4, -1.3, Math.sin(a) * 3.2),
+        ]),
+        28,
+        0.012,
+        5,
+        false
+      ),
+      new THREE.MeshStandardMaterial({ color: 0x8ab4ff, metalness: 0.7, roughness: 0.25 })
+    )
+  );
 }
+const floorGeo = new THREE.PlaneGeometry(0.22, 0.22);
+const floorMat = new THREE.MeshStandardMaterial({ color: 0x1a1e28, metalness: 0.4, roughness: 0.6 });
+const floor = new THREE.InstancedMesh(floorGeo, floorMat, 784);
+const dummy = new THREE.Object3D();
+let fi = 0;
+for (let x = -13; x <= 13; x++) {
+  for (let z = -13; z <= 13; z++) {
+    dummy.position.set(x * 0.28, -1.42, z * 0.28);
+    dummy.updateMatrix();
+    floor.setMatrixAt(fi++, dummy.matrix);
+  }
+}
+lab.add(floor);
+scene.add(lab);
 
 function frame() {
   requestAnimationFrame(frame);
-  updateProgress();
-  const t = clock.getElapsedTime();
-  const p = world.p;
+  const t = performance.now() * 0.001;
+  world.p += (world.target - world.p) * 0.06;
   world.sx += (world.mx - world.sx) * 0.06;
   world.sy += (world.my - world.sy) * 0.06;
+  const p = world.p;
 
   pMat.uniforms.uTime.value = t;
   pMat.uniforms.uProgress.value = p;
+  pMat.uniforms.uPointer.value.set(world.sx, world.sy);
 
-  // loop opacity + rotation
-  loop.rotation.y = t * 0.12;
-  loop.rotation.x = Math.sin(t * 0.2) * 0.15;
-  loopMat.opacity = 0.25 + 0.45 * fade(p, 0.08, 0.2, 0.35, 0.5);
+  const intro = Math.max(0, 1 - Math.min(1, p / 0.26));
+  const outro = Math.min(1, Math.max(0, (p - 0.88) / 0.12));
+  const burst =
+    Math.min(1, Math.max(0, (p - 0.08) / 0.12)) *
+    (1 - Math.min(1, Math.max(0, (p - 0.26) / 0.16)));
+  const s = 0.08 + Math.max(intro, outro) * 1.05 + burst * 1.35;
+  loop.scale.setScalar(s);
+  loop.rotation.y = t * 0.18;
+  loop.visible = s > 0.2;
+  loopMat.opacity = Math.min(1, Math.max(intro, outro) + burst * 0.4);
 
-  // cards layout
-  const { list, index, local } = focusAt(p);
-  const workOn = fade(p, 0.38, 0.48, 0.72, 0.82);
-  cardGroup.visible = workOn > 0.01;
-  cardGroup.position.z = -0.4;
-  for (let i = 0; i < CARD_COUNT; i++) {
-    const mesh = cardMeshes[i];
-    const mat = cardMats[i];
-    const proj = list[i] || PROJECTS[i % PROJECTS.length];
-    const offset = (i - index) - (local - 0.5) * 0.4;
-    const targetX = offset * 1.75;
-    const targetY = Math.sin(offset * 0.8) * 0.25;
-    const targetZ = -Math.abs(offset) * 0.55;
-    const targetRot = offset * 0.22;
-    mesh.position.x += (targetX - mesh.position.x) * 0.1;
-    mesh.position.y += (targetY - mesh.position.y) * 0.1;
-    mesh.position.z += (targetZ - mesh.position.z) * 0.1;
-    mesh.rotation.y += (targetRot - mesh.rotation.y) * 0.1;
-    mesh.rotation.x = world.sy * 0.08;
-    mesh.scale.setScalar(0.85 + (i === index ? 0.22 : 0) * workOn);
-    mat.uniforms.uTime.value = t;
-    mat.uniforms.uActive.value = (i === index ? 1 : 0.25) * workOn;
-    mesh.visible = i < list.length;
-  }
+  const { local } = focusAt(p);
+  const list = visible();
+  const f = local * Math.max(0, list.length - 1);
+  const gallery =
+    Math.min(1, Math.max(0, (p - 0.36) / 0.12)) *
+    (1 - Math.min(1, Math.max(0, (p - 0.72) / 0.12)));
+  const spread = mobile ? 1.7 : 2.65;
 
-  // lab
-  const labOn = fade(p, 0.68, 0.8, 0.92, 1.0);
-  labGroup.visible = labOn > 0.01;
-  labGroup.position.set(0, -0.2, 0);
-  labGroup.rotation.y = t * 0.25;
-  cyl.material.opacity = 0.25 + labOn * 0.4;
-  heart.rotation.y = -t * 0.4;
-  heart.material.opacity = 0.4 + labOn * 0.5;
-  floor.material.opacity = 0.12 + labOn * 0.25;
+  cards.forEach((mesh, i) => {
+    const idx = list.findIndex((item) => item.id === PROJECTS[i].id);
+    const match = idx >= 0;
+    const delta = match ? idx - f : 0;
+    mesh.position.x += (delta * spread + world.sx * 0.18 - mesh.position.x) * 0.08;
+    mesh.position.y += ((match ? 0.72 : -2) + world.sy * 0.1 - mesh.position.y) * 0.08;
+    mesh.position.z += (-Math.abs(delta) * 0.9 - mesh.position.z) * 0.08;
+    mesh.rotation.y += (delta * -0.38 - mesh.rotation.y) * 0.08;
+    const sc = match
+      ? (1.02 - Math.min(Math.abs(delta), 1.4) * 0.16) * (0.15 + gallery * 0.85)
+      : 0.001;
+    mesh.scale.setScalar(Math.max(0.0001, mesh.scale.x + (sc - mesh.scale.x) * 0.08));
+    mesh.material.uniforms.uTime.value = t;
+    mesh.material.uniforms.uActive.value +=
+      ((match && Math.abs(delta) < 0.45 ? 1 : 0) - mesh.material.uniforms.uActive.value) * 0.08;
+  });
 
-  // camera path
-  const zTarget = 6.2 - p * 1.8 + Math.sin(p * Math.PI) * 0.4;
+  const labIn =
+    Math.min(1, Math.max(0, (p - 0.7) / 0.14)) *
+    (1 - Math.min(1, Math.max(0, (p - 0.93) / 0.07)));
+  lab.visible = labIn > 0.02;
+  lab.scale.setScalar(0.55 + labIn * 0.62);
+  heart.rotation.y = t * 0.35;
+
+  const zTarget =
+    7.5 -
+    Math.min(1, p / 0.4) * 0.7 -
+    labIn * 1.7 +
+    Math.min(1, Math.max(0, (p - 0.9) / 0.1)) * 1.3;
   camera.position.z += (zTarget - camera.position.z) * 0.06;
   camera.position.x += (world.sx * 0.55 - camera.position.x) * 0.06;
   camera.lookAt(world.sx * 0.15, 0, 0);
@@ -490,9 +486,47 @@ function frame() {
 }
 
 paintFocus();
-addEventListener("resize", () => {
-  camera.aspect = innerWidth / innerHeight;
+function getSize() {
+  // Prefer visualViewport for mobile browser chrome (iOS Safari etc.)
+  const vv = window.visualViewport;
+  const w = Math.max(1, Math.floor(vv ? vv.width : innerWidth));
+  const h = Math.max(1, Math.floor(vv ? vv.height : innerHeight));
+  return { w, h };
+}
+
+function onResize() {
+  updateMobile();
+  const { w, h } = getSize();
+  const aspect = w / h;
+  camera.aspect = aspect;
+  // Slight FOV tweak for extreme aspect ratios so content stays readable
+  const baseFov = 37;
+  if (aspect > 1.9) camera.fov = baseFov * 0.92;
+  else if (aspect < 0.65) camera.fov = baseFov * 1.08;
+  else camera.fov = baseFov;
   camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
+  // Cap pixel ratio lower on small / mobile for performance & heat
+  const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.35 : 1.75);
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(w, h, false);
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+}
+
+let resizeRaf = 0;
+const scheduleResize = () => {
+  if (resizeRaf) cancelAnimationFrame(resizeRaf);
+  resizeRaf = requestAnimationFrame(() => {
+    resizeRaf = 0;
+    onResize();
+  });
+};
+
+addEventListener("resize", scheduleResize, { passive: true });
+addEventListener("orientationchange", () => setTimeout(scheduleResize, 120), { passive: true });
+if (window.visualViewport) {
+  visualViewport.addEventListener("resize", scheduleResize, { passive: true });
+  visualViewport.addEventListener("scroll", scheduleResize, { passive: true });
+}
+onResize();
 frame();
