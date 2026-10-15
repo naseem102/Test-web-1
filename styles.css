@@ -122,7 +122,13 @@ canvas {
   align-items: center;
   gap: var(--ui-gap);
   padding: calc(var(--pad-y) + var(--safe-t)) calc(var(--pad-x) + var(--safe-r)) var(--pad-y) calc(var(--pad-x) + var(--safe-l));
-  z-index: 3;
+  z-index: 4;
+  background: linear-gradient(to bottom, rgba(7,8,12,0.72) 0%, rgba(7,8,12,0) 100%);
+  pointer-events: none;
+}
+.top .brand,
+.top .pills {
+  pointer-events: auto;
 }
 
 .brand {
@@ -202,6 +208,9 @@ form button:hover,
 
 .hero {
   bottom: calc(4.6rem + var(--safe-b));
+  top: auto;
+  max-height: calc(100% - 7.5rem - var(--safe-t) - var(--safe-b));
+  overflow: hidden;
 }
 .manifesto {
   top: clamp(22%, 28vh, 32%);
@@ -227,8 +236,8 @@ h1, h2, h3 {
   word-break: break-word;
 }
 
-h1 { font-size: clamp(2.4rem, 9vw, 7rem); }
-h2 { font-size: clamp(1.9rem, 6.5vw, 5.2rem); }
+h1 { font-size: clamp(2.1rem, 7.5vw, 5.2rem); }
+h2 { font-size: clamp(1.7rem, 5.5vw, 4rem); }
 h3 { font-size: clamp(1.7rem, 5vw, 3.8rem); }
 
 .lede {
@@ -474,7 +483,7 @@ textarea { min-height: 4.5rem; resize: vertical; }
   margin-top: 1rem;
 }
 
-.hidden { visibility: hidden; pointer-events: none; }
+.hidden { visibility: hidden; pointer-events: none; opacity: 0 !important; }
 
 /* ——— Loading veil ——— */
 .veil {
