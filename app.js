@@ -227,9 +227,11 @@ const pMat = new THREE.ShaderMaterial({
       float t=seed*6.2831853+uTime*0.32; float s=sin(t), c=cos(t), den=1.0+s*s;
       vec3 loop=vec3((c/den)*2.55,(s*c/den)*2.55,sin(t*2.0)*0.22);
       q=mix(q,loop,max(intro,outro)*0.94);
-      q+=normalize(p+0.001)*burst*(1.6+seed*4.4);
-      q.y+=sin(uTime*1.5+seed*24.0)*burst*0.6;
-      q=mix(q,vec3((fract(seed*7.13)-0.5)*6.5,(fract(seed*3.71)-0.5)*3.2,-0.4-fract(seed*11.2)*2.8),gallery);
+      q+=normalize(p+0.001)*burst*(1.2+seed*2.8);
+      q.y+=sin(uTime*1.5+seed*24.0)*burst*0.45;
+      float hold=smoothstep(0.18,0.28,uProgress)*(1.0-smoothstep(0.42,0.55,uProgress));
+      q=mix(q,p*0.85,hold*0.55);
+      q=mix(q,vec3((fract(seed*7.13)-0.5)*5.5,(fract(seed*3.71)-0.5)*2.8,-0.3-fract(seed*11.2)*2.2),gallery);
       float ang=seed*18.0+uTime*0.5; float rad=0.35+fract(seed*4.4)*0.85;
       q=mix(q,vec3(cos(ang)*rad,(fract(seed*9.0)-0.5)*2.7,sin(ang)*rad),lab);
       q.x+=uPointer.x*0.5; q.y+=uPointer.y*0.28;
