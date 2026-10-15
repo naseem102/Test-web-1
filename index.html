@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
   <title>Velora — Creative Digital Experiences</title>
-  <meta name="description" content="Velora cinematic WebGL test reel" />
+  <meta name="description" content="Velora — a cinematic test reel of creative digital experiences. Scroll through the studio." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#07080c" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -30,20 +32,24 @@
             <button type="button" id="to-contact">Contact</button>
           </nav>
         </header>
+
         <section class="copy hero" id="hero">
           <p class="eyebrow">Est. MMXII · In-house atelier</p>
           <h1>Creative<br />digital<br />experiences</h1>
           <p class="lede">Scroll. The reel answers.</p>
         </section>
+
         <section class="copy manifesto hidden" id="manifesto">
           <p class="eyebrow">The studio</p>
           <h2>Story, light<br />and code.<br />One room.</h2>
-          <p class="lede">Websites, rooms, headsets, worlds and games — built in one atelier.</p>
+          <p class="lede">Websites, rooms, headsets, worlds and games — built in one atelier, without handing the feeling off.</p>
         </section>
+
         <aside class="finder hidden" id="finder">
           <p class="eyebrow">What are you looking for?</p>
           <ul id="filters"></ul>
         </aside>
+
         <section class="work hidden" id="work">
           <p class="eyebrow" id="work-meta"></p>
           <h2 id="work-title"></h2>
@@ -53,22 +59,26 @@
             <button type="button" id="next-piece">Next piece</button>
           </div>
         </section>
+
         <section class="copy lab-copy hidden" id="lab-copy">
           <p class="eyebrow">The lab</p>
           <h2>A pulse<br />we have<br />not shipped.</h2>
-          <p class="lede">Unfinished ideas stay warm in glass.</p>
+          <p class="lede">Unfinished ideas stay warm in glass. Move, and the cables follow.</p>
         </section>
+
         <section class="contact hidden" id="contact">
           <div>
             <p class="eyebrow">Start something</p>
             <h2>Tell us<br />the feeling.</h2>
+            <p class="lede">A name and one sentence. Saved on this device.</p>
           </div>
           <form id="signal">
-            <label>Name<input name="name" required maxlength="60" placeholder="Your name" /></label>
+            <label>Name<input name="name" required maxlength="60" placeholder="Your name" autocomplete="name" /></label>
             <label>The idea<textarea name="idea" required maxlength="240" rows="3" placeholder="A site that feels like weather…"></textarea></label>
             <button type="submit">Send the signal</button>
           </form>
         </section>
+
         <div class="rail" aria-label="Chapters">
           <button type="button" data-at="0"><i></i><span>Intro</span></button>
           <button type="button" data-at="0.24"><i></i><span>Studio</span></button>
@@ -76,11 +86,13 @@
           <button type="button" data-at="0.8"><i></i><span>Lab</span></button>
           <button type="button" data-at="0.94"><i></i><span>Contact</span></button>
         </div>
+
         <footer class="dock">
           <span>Scroll</span>
           <span class="track"><i id="bar"></i></span>
           <span id="chapter">intro</span>
         </footer>
+
         <div class="dialog" id="dialog" role="dialog" aria-modal="true">
           <article>
             <p class="eyebrow" id="d-kicker"></p>
@@ -93,6 +105,7 @@
             </div>
           </article>
         </div>
+
         <div class="veil" id="veil">
           <svg viewBox="0 0 64 28" width="84" height="36" aria-hidden="true" style="color:var(--gold)">
             <path d="M32 14C32 14 26 4 18 4 10 4 6 9 6 14s4 10 12 10c8 0 14-10 14-10zm0 0c0 0 6-10 14-10 8 0 12 5 12 10s-4 10-12 10c-8 0-14-10-14-10z" fill="none" stroke="currentColor" stroke-width="1.4"/>
@@ -102,6 +115,7 @@
       </div>
     </div>
   </main>
+
   <script src="https://unpkg.com/three@0.186.1/build/three.min.js"></script>
   <script src="app.js"></script>
 </body>
