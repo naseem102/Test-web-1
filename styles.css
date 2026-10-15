@@ -29,7 +29,7 @@ html, body {
   background: var(--void);
   color: var(--ink);
   font-family: Outfit, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  overflow-x: hidden;
+  overflow-x: clip;
   overscroll-behavior-y: none;
 }
 
@@ -57,6 +57,7 @@ input, textarea {
 .runway {
   height: 580vh;
   min-height: 580vh;
+  position: relative;
 }
 
 .lock {
@@ -64,9 +65,9 @@ input, textarea {
   top: 0;
   height: 100vh;
   height: 100dvh;
-  height: 100svh;
   overflow: hidden;
   width: 100%;
+  max-width: 100vw;
 }
 
 canvas {
@@ -111,7 +112,6 @@ canvas {
   pointer-events: auto;
 }
 
-/* ——— Top bar ——— */
 .top {
   position: absolute;
   top: 0;
@@ -196,13 +196,12 @@ form button:hover,
   background: rgba(231, 194, 122, 0.14);
 }
 
-/* ——— Copy blocks ——— */
 .copy {
   position: absolute;
   left: calc(var(--pad-x) + var(--safe-l));
   right: auto;
   max-width: min(40rem, calc(100% - 2 * var(--pad-x) - var(--safe-l) - var(--safe-r)));
-  transition: opacity 200ms ease;
+  transition: opacity 220ms ease;
   z-index: 2;
 }
 
@@ -213,7 +212,11 @@ form button:hover,
   overflow: hidden;
 }
 .manifesto {
-  top: clamp(22%, 28vh, 32%);
+  top: 50%;
+  transform: translateY(-50%);
+  left: calc(var(--pad-x) + var(--safe-l));
+  right: calc(var(--pad-x) + var(--safe-r));
+  max-width: min(42rem, calc(100% - 2 * var(--pad-x)));
 }
 .lab-copy {
   bottom: calc(5rem + var(--safe-b));
@@ -249,7 +252,6 @@ h3 { font-size: clamp(1.7rem, 5vw, 3.8rem); }
   font-size: clamp(0.9rem, 2.2vw, 1.05rem);
 }
 
-/* ——— Filters ——— */
 .finder {
   position: absolute;
   left: calc(var(--pad-x) + var(--safe-l));
@@ -290,7 +292,6 @@ h3 { font-size: clamp(1.7rem, 5vw, 3.8rem); }
   flex-shrink: 0;
 }
 
-/* ——— Work panel ——— */
 .work {
   position: absolute;
   right: calc(4rem + var(--safe-r));
@@ -310,7 +311,6 @@ h3 { font-size: clamp(1.7rem, 5vw, 3.8rem); }
   margin-top: 0.7rem;
 }
 
-/* ——— Contact ——— */
 .contact {
   position: absolute;
   left: calc(var(--pad-x) + var(--safe-l));
@@ -363,7 +363,6 @@ input:focus, textarea:focus {
 }
 textarea { min-height: 4.5rem; resize: vertical; }
 
-/* ——— Dock / progress ——— */
 .dock {
   position: absolute;
   left: calc(var(--pad-x) + var(--safe-l));
@@ -396,7 +395,6 @@ textarea { min-height: 4.5rem; resize: vertical; }
   transform: scaleX(0.04);
 }
 
-/* ——— Chapter rail ——— */
 .rail {
   position: absolute;
   right: calc(0.65rem + var(--safe-r));
@@ -446,7 +444,6 @@ textarea { min-height: 4.5rem; resize: vertical; }
   opacity: 1;
 }
 
-/* ——— Dialog ——— */
 .dialog {
   position: absolute;
   inset: 0;
@@ -485,7 +482,6 @@ textarea { min-height: 4.5rem; resize: vertical; }
 
 .hidden { visibility: hidden; pointer-events: none; opacity: 0 !important; }
 
-/* ——— Loading veil ——— */
 .veil {
   position: absolute;
   inset: 0;
@@ -506,8 +502,6 @@ textarea { min-height: 4.5rem; resize: vertical; }
   font-size: 0.7rem;
   color: var(--mute);
 }
-
-/* ========== RESPONSIVE BREAKPOINTS ========== */
 
 @media (max-width: 1100px) {
   .work {
@@ -584,7 +578,7 @@ textarea { min-height: 4.5rem; resize: vertical; }
 
   .hero { bottom: calc(4.1rem + var(--safe-b)); }
   .lab-copy { bottom: calc(4.3rem + var(--safe-b)); }
-  .manifesto { top: calc(5.2rem + var(--safe-t)); }
+  .manifesto { top: 50%; transform: translateY(-50%); }
 
   .finder {
     top: calc(3.9rem + var(--safe-t));
@@ -633,7 +627,7 @@ textarea { min-height: 4.5rem; resize: vertical; }
 @media (max-height: 520px) {
   .hero { bottom: calc(3.2rem + var(--safe-b)); }
   .lab-copy { bottom: calc(3.2rem + var(--safe-b)); }
-  .manifesto { top: calc(3.8rem + var(--safe-t)); }
+  .manifesto { top: 48%; transform: translateY(-50%); }
   .finder { top: calc(3.5rem + var(--safe-t)); }
   .work { bottom: calc(3.1rem + var(--safe-b)); }
   .contact {
