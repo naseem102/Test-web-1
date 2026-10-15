@@ -156,7 +156,7 @@ renderer.toneMappingExposure = 1.12;
 renderer.setClearColor(0x07080c);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x07080c, 0.055);
+scene.fog = new THREE.FogExp2(0x07080c, 0.035);
 const camera = new THREE.PerspectiveCamera(37, innerWidth / innerHeight, 0.1, 48);
 camera.position.set(0, 0.2, 7.5);
 
@@ -229,14 +229,14 @@ const pMat = new THREE.ShaderMaterial({
       q=mix(q,loop,max(intro,outro)*0.94);
       q+=normalize(p+0.001)*burst*(1.6+seed*4.4);
       q.y+=sin(uTime*1.5+seed*24.0)*burst*0.6;
-      q=mix(q,vec3((fract(seed*7.13)-0.5)*12.0,(fract(seed*3.71)-0.5)*5.2,-1.2-fract(seed*11.2)*5.5),gallery);
+      q=mix(q,vec3((fract(seed*7.13)-0.5)*6.5,(fract(seed*3.71)-0.5)*3.2,-0.4-fract(seed*11.2)*2.8),gallery);
       float ang=seed*18.0+uTime*0.5; float rad=0.35+fract(seed*4.4)*0.85;
       q=mix(q,vec3(cos(ang)*rad,(fract(seed*9.0)-0.5)*2.7,sin(ang)*rad),lab);
       q.x+=uPointer.x*0.5; q.y+=uPointer.y*0.28;
       vec4 mv=modelViewMatrix*vec4(q,1.0);
       gl_Position=projectionMatrix*mv;
       gl_PointSize=clamp(aSize*(220.0/max(1.0,-mv.z)),0.6,12.0);
-      vAlpha=smoothstep(20.0,3.5,-mv.z);
+      vAlpha=smoothstep(28.0,2.0,-mv.z);
     }`,
   fragmentShader: `
     precision highp float; varying vec3 vColor; varying float vAlpha;
@@ -394,23 +394,24 @@ function frame() {
   pMat.uniforms.uProgress.value = p;
   pMat.uniforms.uPointer.value.set(world.sx, world.sy);
 
-  const intro = Math.max(0, 1 - Math.min(1, p / 0.26));
-  const outro = Math.min(1, Math.max(0, (p - 0.88) / 0.12));
+  const intro = Math.max(0, 1 - Math.min(1, p / 0.28));
+  const outro = Math.min(1, Math.max(0, (p - 0.86) / 0.14));
   const burst =
-    Math.min(1, Math.max(0, (p - 0.08) / 0.12)) *
-    (1 - Math.min(1, Math.max(0, (p - 0.26) / 0.16)));
-  const s = 0.08 + Math.max(intro, outro) * 1.05 + burst * 1.35;
+    Math.min(1, Math.max(0, (p - 0.06) / 0.14)) *
+    (1 - Math.min(1, Math.max(0, (p - 0.28) / 0.18)));
+  const midGlow = Math.min(1, Math.max(0, (p - 0.3) / 0.15)) * (1 - Math.min(1, Math.max(0, (p - 0.7) / 0.15))) * 0.35;
+  const s = 0.12 + Math.max(intro, outro) * 1.05 + burst * 1.35 + midGlow;
   loop.scale.setScalar(s);
   loop.rotation.y = t * 0.18;
-  loop.visible = s > 0.2;
-  loopMat.opacity = Math.min(1, Math.max(intro, outro) + burst * 0.4);
+  loop.visible = s > 0.15;
+  loopMat.opacity = Math.min(1, Math.max(intro, outro) + burst * 0.45 + midGlow);
 
   const { local } = focusAt(p);
   const list = visible();
   const f = local * Math.max(0, list.length - 1);
   const gallery =
-    Math.min(1, Math.max(0, (p - 0.36) / 0.12)) *
-    (1 - Math.min(1, Math.max(0, (p - 0.72) / 0.12)));
+    Math.min(1, Math.max(0, (p - 0.32) / 0.14)) *
+    (1 - Math.min(1, Math.max(0, (p - 0.74) / 0.12)));
   const spread = mobile ? 1.7 : 2.65;
 
   cards.forEach((mesh, i) => {
@@ -449,12 +450,12 @@ function frame() {
   const chapter =
     p < 0.16 ? "intro" : p < 0.4 ? "manifesto" : p < 0.72 ? "work" : p < 0.9 ? "lab" : "contact";
 
-  $("hero").style.opacity = String(fade(p, 0, 0.02, 0.16, 0.3));
-  $("manifesto").style.opacity = String(fade(p, 0.14, 0.24, 0.4, 0.5));
-  $("work").style.opacity = String(fade(p, 0.4, 0.5, 0.7, 0.8));
-  $("finder").style.opacity = String(fade(p, 0.4, 0.5, 0.7, 0.8));
-  $("lab-copy").style.opacity = String(fade(p, 0.72, 0.82, 0.9, 0.96));
-  $("contact").style.opacity = String(fade(p, 0.9, 0.96, 1.2, 1.3));
+  $("hero").style.opacity = String(fade(p, 0, 0.01, 0.14, 0.28));
+  $("manifesto").style.opacity = String(fade(p, 0.12, 0.22, 0.38, 0.52));
+  $("work").style.opacity = String(fade(p, 0.36, 0.48, 0.72, 0.84));
+  $("finder").style.opacity = String(fade(p, 0.36, 0.48, 0.72, 0.84));
+  $("lab-copy").style.opacity = String(fade(p, 0.68, 0.78, 0.9, 0.98));
+  $("contact").style.opacity = String(fade(p, 0.86, 0.93, 1.15, 1.25));
 
   $("manifesto").classList.toggle("hidden", chapter !== "manifesto");
   $("finder").classList.toggle("hidden", chapter !== "work");
@@ -487,7 +488,6 @@ function frame() {
 
 paintFocus();
 function getSize() {
-  // Prefer visualViewport for mobile browser chrome (iOS Safari etc.)
   const vv = window.visualViewport;
   const w = Math.max(1, Math.floor(vv ? vv.width : innerWidth));
   const h = Math.max(1, Math.floor(vv ? vv.height : innerHeight));
@@ -499,13 +499,11 @@ function onResize() {
   const { w, h } = getSize();
   const aspect = w / h;
   camera.aspect = aspect;
-  // Slight FOV tweak for extreme aspect ratios so content stays readable
   const baseFov = 37;
   if (aspect > 1.9) camera.fov = baseFov * 0.92;
   else if (aspect < 0.65) camera.fov = baseFov * 1.08;
   else camera.fov = baseFov;
   camera.updateProjectionMatrix();
-  // Cap pixel ratio lower on small / mobile for performance & heat
   const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.35 : 1.75);
   renderer.setPixelRatio(dpr);
   renderer.setSize(w, h, false);
